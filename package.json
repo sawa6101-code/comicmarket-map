@@ -1,0 +1,8 @@
+{
+  "name": "comiket-map-pwa",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {"start":"expo start","web":"expo start --web","build:pwa":"npx expo export --platform web"},
+  "dependencies": {"expo":"~51.0.0","expo-status-bar":"~1.12.1","firebase":"^10.11.0","react":"18.2.0","react-native":"0.74.1","react-native-gesture-handler":"~2.16.1","react-native-reanimated":"~3.10.1","react-native-svg":"15.2.0"},
+  "devDependencies":{"@babel/core":"^7.20.0","@types/react":"~18.2.45","typescript":"^5.1.3"}
+}
