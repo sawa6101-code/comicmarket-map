@@ -1,0 +1,8 @@
+import React from "react";
+import {StyleSheet,View} from "react-native";
+import Svg,{Rect,Circle as SvgCircle,Text as SvgText} from "react-native-svg";
+import {CircleData,CircleStatus} from "../types";
+interface Props{circles:CircleData[];selectedId:string|null;onSelectCircle:(id:string)=>void;}
+const color=(s:CircleStatus)=>s==="COMPLETED"?"#22C55E":s==="SOLD_OUT"?"#F59E0B":"#EF4444";
+export const InteractiveSvgMap:React.FC<Props>=({circles,selectedId,onSelectCircle})=><View style={styles.container}><Svg viewBox="0 0 1000 650" width="100%" height="100%"><Rect x="20" y="20" width="960" height="610" rx="20" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="5"/><Rect x="80" y="100" width="380" height="360" rx="12" fill="#E2E8F0"/><Rect x="540" y="100" width="380" height="360" rx="12" fill="#E2E8F0"/><SvgText x="105" y="140" fontSize="24" fontWeight="bold" fill="#475569">東1ホール A</SvgText><SvgText x="565" y="140" fontSize="24" fontWeight="bold" fill="#475569">東2ホール B</SvgText><Rect x="390" y="500" width="220" height="70" rx="12" fill="#DBEAFE"/><SvgText x="425" y="543" fontSize="22" fontWeight="bold" fill="#1D4ED8">入口 / EXIT</SvgText>{circles.map(c=><React.Fragment key={c.id}><SvgCircle cx={c.x} cy={c.y} r={selectedId===c.id?25:18} fill={color(c.status)} stroke={selectedId===c.id?"#111827":"#fff"} strokeWidth={selectedId===c.id?6:3} onPress={()=>onSelectCircle(c.id)}/><SvgText x={c.x+22} y={c.y+7} fontSize="16" fill="#334155">{c.space}</SvgText></React.Fragment>)}</Svg></View>;
+const styles=StyleSheet.create({container:{flex:1,minHeight:360,backgroundColor:"#fff",borderRadius:16,overflow:"hidden"}});
