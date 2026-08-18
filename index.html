@@ -1,74 +1,29 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#2563eb">
-  <meta name="description" content="コミケット公式配置図を背景にサークル・購入品・金額を管理するPWA">
-  <link rel="manifest" href="./manifest.json">
-  <link rel="stylesheet" href="./style.css">
-  <title>コミケマップ</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2563eb"><meta name="description" content="コミケ公式配置図を中心にサークル・購入品・購入者・金額を管理するPWA">
+<link rel="manifest" href="./manifest.json"><link rel="stylesheet" href="./style.css"><title>コミケマップ</title>
 </head>
 <body>
-  <header class="topbar">
-    <div><h1>コミケマップ</h1><p>公式配置図 × サークル・購入管理</p></div>
-    <button id="installBtn" class="ghost hidden">ホーム画面に追加</button>
-  </header>
-
-  <main>
-    <section class="card controls">
-      <div class="row wrap">
-        <div><label>開催日</label><div id="days" class="seg"></div></div>
-        <div><label>地図</label><div id="maps" class="seg"></div></div>
-      </div>
-      <p class="notice">コミケット準備会が公開している公式サークルスペース地図を表示します。公式ページ側のPDF/地図を背景として利用し、その上に登録したピンを重ねます。</p>
-      <a id="officialLink" class="button secondary" target="_blank" rel="noopener">公式サークルスペース地図を開く ↗</a>
-    </section>
-
-    <section class="card map-card">
-      <div class="map-toolbar">
-        <strong id="mapTitle">東123</strong>
-        <span id="mapHint">「登録モード」で地図上をタップして位置を指定</span>
-        <button id="registerMode" class="button primary">＋ 地図上から登録</button>
-      </div>
-      <div id="mapStage" class="map-stage">
-        <iframe id="officialMap" title="コミケット公式サークルスペース地図" loading="eager"></iframe>
-        <div id="tapLayer" class="tap-layer hidden"></div>
-        <div id="markers" class="markers"></div>
-      </div>
-    </section>
-
-    <section id="formCard" class="card hidden">
-      <div class="section-head"><h2>サークル登録</h2><button id="cancelForm" class="ghost">閉じる</button></div>
-      <p id="positionText" class="muted"></p>
-      <div class="grid">
-        <label>サークル名<input id="circleName" placeholder="例：○○サークル"></label>
-        <label>スペース<input id="space" placeholder="例：東1 ○01a"></label>
-        <label>購入者<input id="buyer" placeholder="例：郁弥"></label>
-        <label>購入するもの<input id="item" placeholder="例：新刊セット"></label>
-        <label>数量<input id="qty" type="number" min="1" value="1"></label>
-        <label>単価（円）<input id="price" type="number" min="0" value="0"></label>
-      </div>
-      <div class="form-total">この購入品の金額：<strong id="formTotal">¥0</strong></div>
-      <button id="saveCircle" class="button primary wide">登録する</button>
-    </section>
-
-    <section class="card">
-      <div class="section-head"><h2>購入予定総額</h2><button id="resetAll" class="danger ghost">全データ削除</button></div>
-      <div class="totals">
-        <div><span>登録サークル</span><strong id="circleCount">0</strong></div>
-        <div><span>購入予定品</span><strong id="itemCount">0</strong></div>
-        <div class="grand"><span>総額</span><strong id="grandTotal">¥0</strong></div>
-      </div>
-    </section>
-
-    <section class="card">
-      <div class="section-head"><h2>購入リスト</h2><input id="search" class="search" placeholder="サークル・購入者・商品を検索"></div>
-      <div id="list"></div>
-      <p id="empty" class="empty">まだ登録されていません。地図上からサークルを登録してください。</p>
-    </section>
-  </main>
-  <footer>地図：コミケット準備会公式公開資料 ／ 登録データ：この端末に保存</footer>
-  <script src="./app.js"></script>
-</body>
-</html>
+<header class="topbar"><div><h1>コミケマップ</h1><p>C108 · マップ中心のお使い管理</p></div><button id="installBtn" class="ghost hidden">ホーム画面に追加</button></header>
+<main>
+<section class="card compact"><div class="row between"><div><label>開催日</label><div id="days" class="seg"></div></div><button id="registerMode" class="button primary">＋ 地図から登録</button></div></section>
+<section class="card map-card">
+  <div class="map-toolbar"><div><strong id="mapTitle">1日目・東123</strong><small id="mapHint">地図を中心にサークルを管理</small></div><div id="maps" class="seg"></div></div>
+  <div class="map-stage" id="mapStage"><iframe id="officialMap" title="コミケット公式サークルスペース地図" loading="eager"></iframe><div id="tapLayer" class="tap-layer hidden"></div><div id="markers" class="markers"></div><div id="mapModeHint" class="map-mode-hint hidden">地図上の位置をタップしてください</div></div>
+  <div class="map-bottom"><button id="officialLink" class="ghost">公式地図 ↗</button><span id="markerLegend">🔴 未訪問　🟢 購入済み　🟡 完売</span></div>
+</section>
+<section id="formCard" class="sheet hidden"><div class="section-head"><div><h2>サークル登録</h2><p id="positionText" class="muted"></p></div><button id="cancelForm" class="ghost">閉じる</button></div>
+<div class="grid"><label>サークル名<input id="circleName" placeholder="例：○○サークル"></label><label>スペース<input id="space" placeholder="例：東1 A-12a"></label><label>購入者<input id="buyer" placeholder="例：郁弥"></label></div>
+<div class="item-editor"><div class="section-head"><h3>購入するもの</h3><button id="addItem" class="ghost">＋ 商品追加</button></div><div id="itemRows"></div><div class="inline-total">このサークルの予定額 <strong id="formTotal">¥0</strong></div></div>
+<button id="saveCircle" class="button primary wide">登録する</button></section>
+<section class="card"><div class="section-head"><h2>絞り込み</h2><input id="search" class="search" placeholder="サークル・購入者・商品"></div><div id="filters" class="seg filters"></div></section>
+<section class="card"><div class="section-head"><h2>購入予定</h2><span id="circleCount" class="badge">0件</span></div><div class="totals"><div><span>サークル</span><strong id="circleCount2">0</strong></div><div><span>購入品</span><strong id="itemCount">0</strong></div><div class="grand"><span>総額</span><strong id="grandTotal">¥0</strong></div></div><div id="dayTotals" class="day-totals"></div></section>
+<section class="card"><div class="section-head"><h2>サークル一覧</h2></div><div id="list"></div><p id="empty" class="empty">まだ登録されていません。地図から登録してください。</p></section>
+<section id="detail" class="sheet hidden"></section>
+</main>
+<nav class="bottom-nav"><button class="active" data-nav="map">🗺️<span>マップ</span></button><button data-nav="list">📋<span>リスト</span></button><button data-nav="money">💰<span>会計</span></button></nav>
+<footer>地図：コミケット準備会公式公開資料 ／ 登録データ：この端末に保存</footer>
+<script src="./app.js"></script>
+</body></html>
