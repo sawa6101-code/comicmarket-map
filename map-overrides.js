@@ -30,10 +30,26 @@
   function patchMapButtons(){const active=activeMap();[...maps.querySelectorAll('[data-map]')].forEach(b=>{if(ASSETS[b.dataset.map]){b.disabled=false;b.textContent=b.dataset.map;b.classList.toggle('active',b.dataset.map===active)}});applyAsset(active)}
   patchMapButtons();
   new MutationObserver(patchMapButtons).observe(maps,{childList:true,subtree:true});
-  maps.addEventListener('click',e=>{const b=e.target.closest('[data-map]');if(!b||!ASSETS[b.dataset.map])return;b.disabled=false;setTimeout(()=>applyAsset(b.dataset.map),0)},true);
+  maps.addEventListener('click',e=>{const b=e.target.closest('[data-map]');if(!b||!ASSETS[b.dataset.map])return;b.disabled=false;setTimeout(()=>{applyAsset(b.dataset.map);scale=1;tx=0;ty=0;draw()},0)},true);
 
   let scale=1,tx=0,ty=0,start=null,moved=false,touches=new Map(),registering=false,pendingPoint=null;
-  function draw(){canvas.style.transform=`translate3d(${tx}px,${ty}px,0) scale(${scale})`;const z=document.getElementById('zoomReset');if(z)z.textContent=`${Math.round(scale*100)}%`}
+
+  // Keep the map inside the viewport. Because transform-origin is center/center,
+  // the maximum safe translation is half of the overflow on each axis.
+  // This prevents the user from panning the map completely off-screen.
+  function clampPan(){
+    const vw=viewport.clientWidth;
+    const vh=viewport.clientHeight;
+    const bw=canvas.offsetWidth;
+    const bh=canvas.offsetHeight;
+    if(!vw||!vh||!bw||!bh)return;
+    const maxX=Math.max(0,(bw*scale-vw)/2);
+    const maxY=Math.max(0,(bh*scale-vh)/2);
+    tx=Math.max(-maxX,Math.min(maxX,tx));
+    ty=Math.max(-maxY,Math.min(maxY,ty));
+  }
+
+  function draw(){clampPan();canvas.style.transform=`translate3d(${tx}px,${ty}px,0) scale(${scale})`;const z=document.getElementById('zoomReset');if(z)z.textContent=`${Math.round(scale*100)}%`}
   function setRegisterMode(on){registering=on;const hint=document.getElementById('mapModeHint');const btn=document.getElementById('registerMode');if(hint)hint.classList.toggle('hidden',!on);if(btn)btn.textContent=on?'登録モード終了':'＋ 地図から登録';viewport.classList.toggle('registering',on)}
   function mapPoint(x,y){const r=canvas.getBoundingClientRect();return{x:Math.max(0,Math.min(1,(x-r.left)/r.width)),y:Math.max(0,Math.min(1,(y-r.top)/r.height))}}
 
@@ -84,10 +100,12 @@
   function beginTouch(list){touches=new Map([...list].map(t=>[t.identifier,{x:t.clientX,y:t.clientY}]));moved=false;if(touches.size===1){const p=[...touches.values()][0];start={x:p.x,y:p.y,tx,ty,scale}}else if(touches.size>=2){const a=[...touches.values()];start={dist:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),scale}}}
   viewport.addEventListener('touchstart',e=>{if(e.target.closest('.marker'))return;e.preventDefault();e.stopImmediatePropagation();beginTouch(e.touches)},{capture:true,passive:false});
   viewport.addEventListener('touchmove',e=>{if(!start)return;e.preventDefault();e.stopImmediatePropagation();touches=new Map([...e.touches].map(t=>[t.identifier,{x:t.clientX,y:t.clientY}]));if(touches.size===1&&start.dist==null){const p=[...touches.values()][0];tx=start.tx+p.x-start.x;ty=start.ty+p.y-start.y;if(Math.hypot(p.x-start.x,p.y-start.y)>7)moved=true;draw()}else if(touches.size>=2&&start.dist>0){const a=[...touches.values()];const d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);scale=Math.max(.8,Math.min(5,start.scale*d/start.dist));moved=true;draw()}},{capture:true,passive:false});
-  viewport.addEventListener('touchend',e=>{if(!start)return;e.preventDefault();e.stopImmediatePropagation();const wasSingle=start.dist==null,t=e.changedTouches[0];touches=new Map([...e.touches].map(x=>[x.identifier,{x:x.clientX,y:x.clientY}]));if(wasSingle&&!moved&&!touches.size&&registering&&t)registerAt(t.clientX,t.clientY);if(!touches.size)start=null;else if(touches.size===1){const p=[...touches.values()][0];start={x:p.x,y:p.y,tx,ty,scale};moved=false}},{capture:true,passive:false});
-  viewport.addEventListener('touchcancel',e=>{e.preventDefault();e.stopImmediatePropagation();touches.clear();start=null;moved=false},{capture:true,passive:false});
-  let mouse=null;viewport.addEventListener('mousedown',e=>{if(e.target.closest('.marker'))return;mouse={x:e.clientX,y:e.clientY,tx,ty};moved=false},true);viewport.addEventListener('mousemove',e=>{if(!mouse)return;tx=mouse.tx+e.clientX-mouse.x;ty=mouse.ty+e.clientY-mouse.y;if(Math.hypot(e.clientX-mouse.x,e.clientY-mouse.y)>6)moved=true;draw()},true);viewport.addEventListener('mouseup',e=>{if(!mouse)return;if(!moved&&registering)registerAt(e.clientX,e.clientY);mouse=null},true);
+  viewport.addEventListener('touchend',e=>{if(!start)return;e.preventDefault();e.stopImmediatePropagation();const wasSingle=start.dist==null,t=e.changedTouches[0];touches=new Map([...e.touches].map(x=>[x.identifier,{x:x.clientX,y:x.clientY}]));if(wasSingle&&!moved&&!touches.size&&registering&&t)registerAt(t.clientX,t.clientY);if(!touches.size){clampPan();start=null}else if(touches.size===1){const p=[...touches.values()][0];start={x:p.x,y:p.y,tx,ty,scale};moved=false;draw()}},{capture:true,passive:false});
+  viewport.addEventListener('touchcancel',e=>{e.preventDefault();e.stopImmediatePropagation();touches.clear();start=null;moved=false;draw()},{capture:true,passive:false});
+  let mouse=null;viewport.addEventListener('mousedown',e=>{if(e.target.closest('.marker'))return;mouse={x:e.clientX,y:e.clientY,tx,ty};moved=false},true);viewport.addEventListener('mousemove',e=>{if(!mouse)return;tx=mouse.tx+e.clientX-mouse.x;ty=mouse.ty+e.clientY-mouse.y;if(Math.hypot(e.clientX-mouse.x,e.clientY-mouse.y)>6)moved=true;draw()},true);viewport.addEventListener('mouseup',e=>{if(!mouse)return;if(!moved&&registering)registerAt(e.clientX,e.clientY);mouse=null;draw()},true);
   viewport.addEventListener('wheel',e=>{e.preventDefault();scale=Math.max(.8,Math.min(5,scale+(e.deltaY<0?.15:-.15)));draw()},{capture:true,passive:false});
   document.getElementById('zoomIn')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();scale=Math.min(5,scale+.25);draw()},true);document.getElementById('zoomOut')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();scale=Math.max(.8,scale-.25);draw()},true);document.getElementById('zoomReset')?.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();scale=1;tx=0;ty=0;draw()},true);
+  window.addEventListener('resize',draw);
+  image.addEventListener('load',draw);
   draw();
 })();
