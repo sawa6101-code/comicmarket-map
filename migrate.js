@@ -1,0 +1,1 @@
+(()=>{try{const old=localStorage.getItem('comicmarket-map-v6');const cur=localStorage.getItem('comicmarket-map-v7');if(old&&!cur)localStorage.setItem('comicmarket-map-v7',old)}catch{}})();
