@@ -1,113 +1,21 @@
 (() => {
-  // v12: status timestamps + custom circle sorting
-  const originalRender = window.renderList;
-  const statusLabels = {UNVISITED:'未訪問',PLANNED:'購入予定',COMPLETED:'購入済み',SOLD_OUT:'完売'};
-
-  function stampStatus(c, next) {
-    const now = new Date().toISOString();
-    if (next === 'COMPLETED') c.completedAt = now;
-    else if (next === 'SOLD_OUT') c.soldOutAt = now;
-    // A timestamp is meaningful only for the two requested statuses.
-    if (next !== 'COMPLETED') delete c.completedAt;
-    if (next !== 'SOLD_OUT') delete c.soldOutAt;
-  }
-
-  function statusTime(c) {
-    const v = c.status === 'COMPLETED' ? c.completedAt : c.status === 'SOLD_OUT' ? c.soldOutAt : null;
-    if (!v) return '';
-    const d = new Date(v);
-    if (Number.isNaN(d.getTime())) return '';
-    return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-  }
-
-  function charRank(ch) {
-    if (/^[ぁ-ゖ]$/.test(ch)) return 0;
-    if (/^[ァ-ヺ]$/.test(ch)) return 1;
-    if (/^[A-Z]$/.test(ch)) return 2;
-    if (/^[a-z]$/.test(ch)) return 3;
-    if (/^[0-9]$/.test(ch)) return 4;
-    return 5;
-  }
-  function compareSpace(a, b) {
-    const clean = s => String(s || '').trim().replace(/\s+/g,'');
-    const aa = clean(a), bb = clean(b);
-    const dirRank = s => s.startsWith('東') ? 0 : s.startsWith('西') ? 1 : s.startsWith('南') ? 2 : 3;
-    const da=dirRank(aa), db=dirRank(bb);
-    if (da !== db) return da-db;
-    const a2=aa.slice(1), b2=bb.slice(1);
-    let i=0;
-    while(i<a2.length && i<b2.length){
-      const ca=a2[i], cb=b2[i];
-      if (/\d/.test(ca) && /\d/.test(cb)) {
-        const ma=a2.slice(i).match(/^\d+/)[0], mb=b2.slice(i).match(/^\d+/)[0];
-        const na=Number(ma), nb=Number(mb);
-        if(na!==nb) return na-nb;
-        i+=Math.max(ma.length,mb.length); continue;
-      }
-      const ra=charRank(ca), rb=charRank(cb);
-      if(ra!==rb) return ra-rb;
-      if(ca!==cb) return ca.localeCompare(cb,'ja');
-      i++;
-    }
-    return a2.length-b2.length;
-  }
-
-  function sortedRows(rows) { return [...rows].sort((a,b)=>compareSpace(a.space,b.space) || String(a.name||'').localeCompare(String(b.name||''),'ja')); }
-
-  window.renderList = function(){
-    const rs = sortedRows(window.rows());
-    const empty=document.getElementById('empty');
-    empty.classList.toggle('hidden',rs.length>0);
-    document.getElementById('list').innerHTML=rs.map(c=>`<article class="purchase" data-open="${c.id}"><div><h3>${window.esc(c.name)} <span class="status ${c.status}">${statusLabels[c.status]}</span></h3><p>${window.esc(c.space)} ・ 📍 ${window.esc(c.traveler||'未指定')} ・ 👤 ${window.esc(c.buyer||'未入力')}</p><div>${(c.items||[]).map(i=>`<span class="item-chip">${window.esc(i.name)} ×${i.qty} ${window.yen(i.qty*i.price)}</span>`).join('')}</div>${statusTime(c)?`<p class="status-time">${c.status==='COMPLETED'?'購入済み':'完売'}：${statusTime(c)}</p>`:''}<div class="action-row">${[['UNVISITED','未訪問'],['PLANNED','購入予定'],['COMPLETED','購入済み'],['SOLD_OUT','完売']].map(s=>`<button type="button" class="ghost statusBtn" data-id="${c.id}" data-status="${s[0]}">${s[1]}</button>`).join('')}</div></div><div class="money">${window.yen(window.total(c))}</div></article>`).join('');
-  };
-
-  // Replace the existing status click delegation with timestamp-aware handling.
-  const list=document.getElementById('list');
-  list.addEventListener('click',e=>{
-    const s=e.target.closest('.statusBtn');
-    if(!s) return;
-    e.stopImmediatePropagation(); e.preventDefault();
-    const c=window.state.circles.find(x=>x.id===s.dataset.id);
-    if(!c) return;
-    stampStatus(c,s.dataset.status);
-    c.status=s.dataset.status;
-    window.save();
-    // save() redraws the map and list, so the marker color/status is immediate.
-  },true);
-
-  // Ensure marker/details also expose the recorded time.
-  const originalRenderDetail=window.renderDetail;
-  window.renderDetail=function(){
-    originalRenderDetail();
-    const c=window.state.circles.find(x=>x.id===window.detail);
-    if(!c) return;
-    const t=statusTime(c);
-    if(t){
-      const p=document.createElement('p'); p.className='status-time';
-      p.textContent=`${c.status==='COMPLETED'?'購入済み':'完売'}：${t}`;
-      document.getElementById('detail').appendChild(p);
-    }
-  };
-
-  // Sort button: insert once, next to the circle-list heading.
-  const cards=document.querySelectorAll('.card');
-  const listCard=[...cards].find(x=>x.querySelector('#list'));
-  // The list is rendered in a following card, so locate its heading by #list parent.
-  const listEl=document.getElementById('list');
-  if(listEl){
-    const head=listEl.closest('.card')?.querySelector('.section-head');
-    if(head && !document.getElementById('sortList')){
-      const b=document.createElement('button');
-      b.id='sortList'; b.type='button'; b.className='ghost'; b.textContent='並び順：東→西→南';
-      head.appendChild(b);
-      b.onclick=()=>{ b.classList.toggle('active'); b.textContent=b.classList.contains('active')?'並び順：スペース順✓':'並び順：東→西→南'; window.renderList(); };
-    }
-  }
-
-  // Live cross-tab refresh: map/list/status changes made in another tab are reflected immediately.
-  window.addEventListener('storage',e=>{ if(e.key==='comicmarket-map-v7'){ try{window.state=JSON.parse(e.newValue||'{}'); window.normalize(); window.render();}catch{} } });
-  window.addEventListener('resize',()=>{ try{window.applyTransform();}catch{} });
-
-  // Initial migration for older records.
-  try { window.state.circles.forEach(c=>{ if(c.status!=='COMPLETED') delete c.completedAt; if(c.status!=='SOLD_OUT') delete c.soldOutAt; }); } catch {}
+  const KEY='comicmarket-map-v7';
+  const labels={UNVISITED:'未訪問',PLANNED:'購入予定',COMPLETED:'購入済み',SOLD_OUT:'完売'};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const yen=n=>'¥'+Math.round(Number(n)||0).toLocaleString('ja-JP');
+  const total=c=>(c.items||[]).reduce((n,i)=>n+(+i.qty||0)*(+i.price||0),0);
+  const read=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return {}}};
+  const rank=ch=>/^[ぁ-ゖ]$/.test(ch)?0:/^[ァ-ヺ]$/.test(ch)?1:/^[A-Z]$/.test(ch)?2:/^[a-z]$/.test(ch)?3:/^[0-9]$/.test(ch)?4:5;
+  function compareSpace(a,b){const clean=s=>String(s||'').trim().replace(/\s+/g,'');const aa=clean(a),bb=clean(b);const dr=s=>s.startsWith('東')?0:s.startsWith('西')?1:s.startsWith('南')?2:3;if(dr(aa)!==dr(bb))return dr(aa)-dr(bb);const x=aa.slice(1),y=bb.slice(1);let i=0;while(i<x.length&&i<y.length){const cx=x[i],cy=y[i];if(/\d/.test(cx)&&/\d/.test(cy)){const mx=x.slice(i).match(/^\d+/)[0],my=y.slice(i).match(/^\d+/)[0];if(+mx!==+my)return +mx-+my;i+=Math.max(mx.length,my.length);continue;}const rx=rank(cx),ry=rank(cy);if(rx!==ry)return rx-ry;if(cx!==cy)return cx.localeCompare(cy,'ja');i++;}return x.length-y.length;}
+  const fmtTime=iso=>{if(!iso)return '';const d=new Date(iso);if(Number.isNaN(d.getTime()))return '';return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`};
+  function sortCurrent(){const s=read(),day=s.day||'1日目',map=s.map||'東123',filter=s.filter||'ALL',q=(document.getElementById('search')?.value||'').toLowerCase().trim();return(s.circles||[]).filter(c=>c.day===day&&c.map===map&&(filter==='ALL'||c.status===filter)&&(!q||[c.name,c.space,c.buyer,c.traveler,...(c.items||[]).map(i=>i.name)].join(' ').toLowerCase().includes(q))).sort((a,b)=>compareSpace(a.space,b.space)||String(a.name||'').localeCompare(String(b.name||''),'ja'));}
+  function addSortButton(){const list=document.getElementById('list');if(!list||document.getElementById('sortList'))return;const head=list.closest('.card')?.querySelector('.section-head');if(!head)return;const b=document.createElement('button');b.id='sortList';b.type='button';b.className='ghost';b.textContent='並び替え：東→西→南';head.appendChild(b);b.onclick=()=>{renderSortedList();b.textContent='並び順：東→西→南';};}
+  function renderSortedList(){const rs=sortCurrent(),list=document.getElementById('list'),empty=document.getElementById('empty');if(!list)return;if(empty)empty.classList.toggle('hidden',rs.length>0);list.innerHTML=rs.map(c=>`<article class="purchase" data-open="${esc(c.id)}"><div><h3>${esc(c.name)} <span class="status ${esc(c.status)}">${labels[c.status]||c.status}</span></h3><p>${esc(c.space)} ・ 📍 ${esc(c.traveler||'未指定')} ・ 👤 ${esc(c.buyer||'未入力')}</p><div>${(c.items||[]).map(i=>`<span class="item-chip">${esc(i.name)} ×${i.qty} ${yen(i.qty*i.price)}</span>`).join('')}</div>${c.status==='COMPLETED'&&c.completedAt?`<p class="status-time">購入済み：${fmtTime(c.completedAt)}</p>`:''}${c.status==='SOLD_OUT'&&c.soldOutAt?`<p class="status-time">完売：${fmtTime(c.soldOutAt)}</p>`:''}<div class="action-row">${[['UNVISITED','未訪問'],['PLANNED','購入予定'],['COMPLETED','購入済み'],['SOLD_OUT','完売']].map(x=>`<button type="button" class="ghost statusBtn" data-id="${esc(c.id)}" data-status="${x[0]}">${x[1]}</button>`).join('')}</div></div><div class="money">${yen(total(c))}</div></article>`).join('');}
+  function decorateMarkers(){const s=read(),by=new Map((s.circles||[]).map(c=>[c.id,c]));document.querySelectorAll('[data-marker]').forEach(m=>{const c=by.get(m.dataset.marker);if(!c)return;m.style.borderWidth='3px';m.style.borderStyle='solid';m.style.borderColor=c.status==='COMPLETED'?'#16a34a':c.status==='SOLD_OUT'?'#eab308':'#fff';m.title=`${c.name}・${labels[c.status]||c.status}`;});}
+  function statusTimeUpdate(){const s=read();if(!Array.isArray(s.circles))return;let changed=false;s.circles.forEach(c=>{if(c.status==='COMPLETED'&&!c.completedAt){c.completedAt=new Date().toISOString();changed=true;}if(c.status!=='COMPLETED'&&c.completedAt){delete c.completedAt;changed=true;}if(c.status==='SOLD_OUT'&&!c.soldOutAt){c.soldOutAt=new Date().toISOString();changed=true;}if(c.status!=='SOLD_OUT'&&c.soldOutAt){delete c.soldOutAt;changed=true;}});if(changed)localStorage.setItem(KEY,JSON.stringify(s));}
+  document.addEventListener('click',e=>{if(e.target.closest('.statusBtn'))setTimeout(()=>{statusTimeUpdate();decorateMarkers();},0)},true);
+  window.addEventListener('storage',e=>{if(e.key===KEY)setTimeout(()=>{decorateMarkers();},0)});
+  const observer=new MutationObserver(()=>{addSortButton();decorateMarkers();});observer.observe(document.body,{childList:true,subtree:true});
+  window.addEventListener('load',()=>{addSortButton();decorateMarkers();statusTimeUpdate();});
+  setTimeout(()=>{addSortButton();decorateMarkers();statusTimeUpdate();},100);
 })();
