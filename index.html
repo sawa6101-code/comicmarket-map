@@ -4,23 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#2563eb">
-<meta name="description" content="公式白地図を中心にサークル・購入者・同行者・購入品・金額を管理するコミケ用PWA">
+<meta name="description" content="公式白地図を中心にサークル・購入者・同行者・購入品・金額・ステータス時刻を管理するコミケ用PWA">
 <link rel="manifest" href="./manifest.json">
-<link rel="stylesheet" href="./style.css?v=11">
+<link rel="stylesheet" href="./style.css?v=12">
 <title>コミケマップ</title>
 </head>
 <body>
 <header class="topbar"><div><h1>コミケマップ</h1><p>C108・公式白地図を直接操作</p></div><button id="installBtn" class="ghost hidden" type="button">ホーム画面に追加</button></header>
 <main>
 <section class="card compact" id="mapSection"><div class="row between"><div><label>開催日</label><div id="days" class="seg"></div></div><button id="registerMode" class="button primary" type="button">＋ 地図から登録</button></div></section>
-<section class="card map-card"><div class="map-toolbar"><div><strong id="mapTitle">1日目・東123</strong><small id="mapHint">地図を中心にサークルを管理</small></div><div id="maps" class="seg"></div></div><div class="map-viewport" id="mapViewport"><div class="map-canvas" id="mapCanvas"><img id="mapImage" alt="コミケット公式白地図"><div id="markers" class="markers"></div><div id="mapModeHint" class="map-mode-hint hidden">地図上の登録位置をタップしてください</div></div></div><div class="zoom-controls"><button id="zoomOut" class="ghost" type="button">−</button><button id="zoomReset" class="ghost" type="button">100%</button><button id="zoomIn" class="ghost" type="button">＋</button></div><div class="map-bottom"><button id="officialLink" class="ghost" type="button">公式地図 ↗</button><span>ピン色＝行く人　／　🔴未訪問 🔵購入予定 🟢購入済み 🟡完売</span></div></section>
+<section class="card map-card"><div class="map-toolbar"><div><strong id="mapTitle">1日目・東123</strong><small id="mapHint">地図を中心にサークルを管理</small></div><div id="maps" class="seg"></div></div><div class="map-viewport" id="mapViewport"><div class="map-canvas" id="mapCanvas"><img id="mapImage" alt="コミケット公式白地図"><div id="markers" class="markers"></div><div id="mapModeHint" class="map-mode-hint hidden">地図上の登録位置をタップしてください</div></div></div><div class="zoom-controls"><button id="zoomOut" class="ghost" type="button">−</button><button id="zoomReset" class="ghost" type="button">100%</button><button id="zoomIn" class="ghost" type="button">＋</button></div><div class="map-bottom"><button id="officialLink" class="ghost" type="button">公式地図 ↗</button><span>ピン色＝行く人　／　🔴未訪問 🔵購入予定 🟢購入済み 🔴枠=完売</span></div></section>
 <section id="formCard" class="sheet hidden"><div class="section-head"><div><h2>サークル登録</h2><p id="positionText" class="muted"></p></div><button id="cancelForm" class="ghost" type="button">閉じる</button></div><div class="grid"><label>サークル名<input id="circleName" autocomplete="off" placeholder="例：○○サークル"></label><label>スペース<input id="space" autocomplete="off" placeholder="例：東1 A-12a"></label><label>行く人<select id="traveler"><option value="">選択してください</option><option>花岡</option><option>菊池</option><option>石井</option><option>Akio</option><option>コナカ</option><option>松倉</option><option>砂</option><option>澤井</option><option>風也</option></select></label><label>購入者<input id="buyer" autocomplete="off" placeholder="例：花岡"></label></div><div class="item-editor"><div class="section-head"><h3>購入するもの</h3><button id="addItem" class="ghost add-item-button" type="button">＋ 商品追加</button></div><div id="itemRows"></div><div class="inline-total">このサークルの予定額 <strong id="formTotal">¥0</strong></div></div><button id="saveCircle" class="button primary wide" type="button">登録する</button></section>
 <section class="card" id="listSection"><div class="section-head"><h2>絞り込み</h2><input id="search" class="search" placeholder="サークル・購入者・商品"></div><div id="filters" class="seg filters"></div></section>
 <section class="card" id="moneySection"><div class="section-head"><h2>購入予定</h2><span id="circleCount" class="badge">0件</span></div><div class="totals"><div><span>サークル</span><strong id="circleCount2">0</strong></div><div><span>購入品</span><strong id="itemCount">0</strong></div><div class="grand"><span>総額</span><strong id="grandTotal">¥0</strong></div></div><h3 class="subhead">日別</h3><div id="dayTotals" class="day-totals"></div><h3 class="subhead">行く人別</h3><div id="travelerTotals" class="buyer-totals"></div><h3 class="subhead">購入者別</h3><div id="buyerTotals" class="buyer-totals"></div></section>
 <section class="card"><div class="section-head"><h2>サークル一覧</h2></div><div id="list"></div><p id="empty" class="empty">まだ登録されていません。地図から登録してください。</p></section><section id="detail" class="sheet hidden"></section>
-</main><nav class="bottom-nav"><button class="active" data-nav="map" type="button">🗺️<span>マップ</span></button><button data-nav="list" type="button">📋<span>リスト</span></button><button data-nav="money" type="button">💰<span>会計</span></button></nav><footer>地図：ユーザー提供のコミケット公式白地図 ／ 登録データ：この端末に保存</footer>
-<script src="./migrate.js?v=11"></script>
-<script src="./status-sync.js?v=1"></script>
-<script src="./app.js?v=11"></script>
-<script src="./enhancement.js?v=1"></script>
+<section class="card hidden" id="timeSection"><div class="section-head"><h2>⏱ ステータス時刻</h2></div><div id="timeList"></div><p id="timeEmpty" class="empty">購入済み・完売の記録はありません。</p></section>
+</main><nav class="bottom-nav"><button class="active" data-nav="map" type="button">🗺️<span>マップ</span></button><button data-nav="list" type="button">📋<span>リスト</span></button><button data-nav="money" type="button">💰<span>会計</span></button><button data-nav="time" type="button">⏱<span>時刻</span></button></nav><footer>地図：ユーザー提供のコミケット公式白地図 ／ 登録データ：この端末に保存</footer>
+<script src="./migrate.js?v=12"></script>
+<script src="./status-sync.js?v=2"></script>
+<script src="./app.js?v=12"></script>
+<script src="./enhancement.js?v=3"></script>
 </body></html>
