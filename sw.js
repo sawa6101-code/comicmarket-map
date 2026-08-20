@@ -1,5 +1,5 @@
-const CACHE='comicmarket-map-v20';
-const CORE=['./','./index.html','./style.css?v=20','./event-layer.js?v=4','./event-limit.js?v=1','./app-v2.js?v=4','./interaction-fix.js?v=1','./ui-fixes.js?v=5','./pdf-map.js?v=6','./manifest.json','./maps/east7.jpg','./maps/south12.jpg'];
+const CACHE='comicmarket-map-v21';
+const CORE=['./','./index.html','./style.css?v=21','./event-layer.js?v=5','./app-v2.js?v=5','./manifest.json','./maps/east7.jpg','./maps/south12.jpg'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;e.respondWith(caches.match(e.request).then(cached=>cached||fetch(e.request).then(r=>{if(r.ok){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy)).catch(()=>{})}return r}).catch(()=>caches.match('./index.html'))))});
