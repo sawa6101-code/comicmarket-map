@@ -5,62 +5,62 @@
     '西12':'https://www.comiket.co.jp/info-a/C108/C108Map_w12_B4.pdf'
   };
   const cache=new Map(); let pdfJsPromise=null; let active='';
+  const $=id=>document.getElementById(id);
+  function showImmediate(map,url){
+    const frame=$('pdfMapFrame'),img=$('mapImage'),canvas=$('pdfMapCanvas');
+    if(!frame||!url)return;
+    frame.src=url;
+    frame.style.display='block';
+    frame.style.visibility='visible';
+    if(img){img.style.display='none';img.style.visibility='hidden'}
+    if(canvas){canvas.style.display='none';canvas.style.visibility='hidden';canvas.dataset.ready='0'}
+    active=map;
+  }
   function loadPdfJs(){
     if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
     if(pdfJsPromise)return pdfJsPromise;
     pdfJsPromise=new Promise((resolve,reject)=>{
-      const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      s.async=true;
+      const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';s.async=true;
       s.onload=()=>{if(!window.pdfjsLib)return reject(new Error('PDF.js unavailable'));window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';resolve(window.pdfjsLib)};
       s.onerror=reject;document.head.appendChild(s);
-    });
-    return pdfJsPromise;
+    });return pdfJsPromise;
   }
   function getPdf(url){
     if(cache.has(url))return cache.get(url);
     const p=window.pdfjsLib.getDocument({url,disableAutoFetch:false,disableStream:false}).promise;
-    cache.set(url,p); return p;
+    cache.set(url,p);return p;
   }
-  async function render(){
-    const title=document.getElementById('mapTitle'),canvas=document.getElementById('pdfMapCanvas'),img=document.getElementById('mapImage'),box=document.getElementById('mapViewport'),mapCanvas=document.getElementById('mapCanvas');
+  async function enhance(){
+    const title=$('mapTitle'),canvas=$('pdfMapCanvas'),box=$('mapViewport'),mapCanvas=$('mapCanvas');
     if(!title||!canvas||!box||!mapCanvas)return;
     const map=(title.textContent.match(/・([^・]+)$/)||[])[1],url=PDFS[map];
-    if(!url){canvas.style.display='none';if(img)img.style.display='block';return;}
-    if(active===map&&canvas.dataset.ready==='1')return;
-    active=map; canvas.dataset.ready='0';
-    // Keep the local map visible until the official PDF has rendered successfully.
-    // This prevents a blank map when the external PDF/CDN is slow or blocks CORS.
-    canvas.style.display='block';canvas.style.visibility='hidden';
-    if(img){img.style.display='block';img.style.visibility='visible';}
+    if(!url){active='';canvas.style.display='none';const f=$('pdfMapFrame');if(f)f.style.display='none';const img=$('mapImage');if(img){img.style.display='block';img.style.visibility='visible'}return}
+    // Always put the official PDF on screen first. This is immediate and does not depend on CORS/PDF.js.
+    if(active!==map)showImmediate(map,url);
     try{
       const pdf=await getPdf(url),page=await pdf.getPage(1),base=page.getViewport({scale:1});
-      const targetWidth=Math.min(5000,Math.max(3600,box.clientWidth*4));
-      const renderScale=targetWidth/base.width,view=page.getViewport({scale:renderScale});
+      const targetWidth=Math.min(6000,Math.max(3600,box.clientWidth*4));
+      const view=page.getViewport({scale:targetWidth/base.width});
       canvas.width=Math.ceil(view.width);canvas.height=Math.ceil(view.height);
-      canvas.style.width='100%';canvas.style.height='100%';
+      canvas.style.width='100%';canvas.style.height='100%';canvas.style.display='block';canvas.style.visibility='hidden';
       mapCanvas.style.aspectRatio=`${base.width}/${base.height}`;
-      mapCanvas.style.width='100%';mapCanvas.style.maxWidth='100%';
       const ctx=canvas.getContext('2d',{alpha:false,desynchronized:true});
       await page.render({canvasContext:ctx,viewport:view}).promise;
       canvas.dataset.ready='1';canvas.style.visibility='visible';
-      if(img)img.style.display='none';
+      const frame=$('pdfMapFrame');if(frame)frame.style.display='none';
+      active=map;
     }catch(err){
-      console.warn('Official PDF map render failed; retaining local fallback',map,err);
-      canvas.dataset.ready='0';canvas.style.display='none';
-      if(img)img.style.display='block';
-      active='';
+      // Keep the native official PDF visible when cross-origin PDF.js rendering is unavailable.
+      console.warn('PDF.js unavailable; native official PDF remains visible',map,err);
+      canvas.style.display='none';canvas.dataset.ready='0';
+      const frame=$('pdfMapFrame');if(frame){frame.style.display='block';frame.style.visibility='visible'}
+      active=map;
     }
   }
-  let scheduled=false;
-  function enhance(){
-    if(scheduled)return;
-    scheduled=true;
-    const run=()=>{scheduled=false;loadPdfJs().then(render).catch(()=>{scheduled=false})};
-    if('requestIdleCallback'in window)requestIdleCallback(run,{timeout:2500});else setTimeout(run,300);
-  }
-  document.addEventListener('click',e=>{if(e.target.closest('[data-map],#zoomIn,#zoomOut,#zoomReset'))setTimeout(enhance,0)},{passive:true});
-  window.addEventListener('resize',()=>{if(active){active='';setTimeout(enhance,200)}},{passive:true});
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',enhance,{once:true});else setTimeout(enhance,100);
-  window.CMHighResMap={refresh:()=>{active='';enhance()}};
+  let timer=0;
+  function refresh(){clearTimeout(timer);timer=setTimeout(enhance,0)}
+  document.addEventListener('click',e=>{if(e.target.closest('[data-map],#zoomIn,#zoomOut,#zoomReset'))refresh()},{passive:true});
+  window.addEventListener('resize',()=>{active='';refresh()},{passive:true});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',refresh,{once:true});else refresh();
+  window.CMHighResMap={refresh:()=>{active='';refresh()}};
 })();
